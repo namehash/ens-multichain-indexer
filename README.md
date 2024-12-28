@@ -34,6 +34,8 @@ estimated backfill time @ 50rps = 24-36 hours on M1 Macbook (~10x speedup)
 - [ ] gut check results of resolver index against subgraph up to block 12m
 - [x] implement ethRegistry
 - [ ] implement nameWrapper
+- [ ] ? implement upserts in nameWrapper to support later startblocks for testing?
+- [ ] confirm all the schema relations are configured correctly
 - [ ] better understand reverse resolution & how that pertains to L2 primary names and impacts the future schema, etc
 - [ ] subgraph graphql implementation within ponder
   - [ ] implement subgraph-style pagination api
@@ -41,6 +43,9 @@ estimated backfill time @ 50rps = 24-36 hours on M1 Macbook (~10x speedup)
   - [ ] support collection queries as well, to power scraping diff tool
 - [ ] CI/CD with indexing?
   - more recent endlbock for gut checks
+- [ ] there's an account `0x` in the database, which is definitely a bug — perhaps all addresses should go through `viem/getAddress` before being handled (presumably ponder did this inthe background...)
+- [ ] run the relevant tests from ensjs against our indexer to increase confidence
+  - probably requires a fork of ensjs, update the publicClient instantiation, and scope tests to that dir
 - [ ] integrate rainbow tables for label healing
   - load the tabel dump into pglite & query synchronously to match existing behavior
   - https://github.com/graphprotocol/ens-rainbow

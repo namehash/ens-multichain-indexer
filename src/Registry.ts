@@ -1,8 +1,9 @@
 import { type Context, type Event, ponder } from "ponder:registry";
 import { resolvers } from "ponder:schema";
 import { domains } from "ponder:schema";
+import { encodeLabelhash } from "@ensdomains/ensjs/utils";
 import { type Hex, zeroAddress } from "viem";
-import { NAMEHASH_ZERO, encodeLabelhash, makeSubnodeNamehash } from "./lib/ens-helpers";
+import { NAMEHASH_ZERO, makeSubnodeNamehash } from "./lib/ens-helpers";
 import { makeResolverId } from "./lib/ids";
 import { upsertAccount } from "./lib/upserts";
 

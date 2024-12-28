@@ -9,8 +9,9 @@ import { NameWrapper } from "./abis/NameWrapper";
 import { Registry } from "./abis/Registry";
 import { Resolver } from "./abis/Resolver";
 
-// just for testing...
-const END_BLOCK = 12_000_000;
+const NAME_WRAPPER_START_BLOCK = 16925608;
+
+const END_BLOCK = NAME_WRAPPER_START_BLOCK - 1;
 
 const RESOLVER_ABI = mergeAbis([LegacyPublicResolver, Resolver]);
 
