@@ -25,25 +25,20 @@ estimated backfill time @ 50rps = 24-36 hours on M1 Macbook (~10x speedup)
   - (possible) continued backwards compatibility with subgraph
   - support indexing subset of data, i.e. only domains under parent node
 
-### todo
+#### known bugs
+
+- [ ] there's an account `0x` in the database, which is definitely a bug — perhaps all addresses should go through `viem/getAddress` before being handled (presumably ponder did this inthe background...)
+- [ ] root domain is not `is_migrated`, probably should be
+
+#### next up
 
 - [ ] document the graphql queries/fragments the ponder custom indexer needs to implement
   - [ ] collection queries to support scraper
   - [ ] well-known queries
   - [ ] document verification architecture implementation
-- [ ] gut check results of resolver index against subgraph up to block 12m
-- [x] implement ethRegistry
-- [ ] implement nameWrapper
-- [ ] ? implement upserts in nameWrapper to support later startblocks for testing?
-#### known bugs
-
-- [ ] there's an account `0x` in the database, which is definitely a bug — perhaps all addresses should go through `viem/getAddress` before being handled (presumably ponder did this inthe background...)
-- [ ] root domain is not migrated, probably should be
-
-#### next up
-
-- [ ] implement checkpointing for faster devx
 - [ ] implement/verify nameWrapper
+  - [ ] implement checkpointing for faster devx
+  - [ ] gut check results of resolver index against subgraph up to block 12m
 - [ ] confirm all the schema relations are configured correctly
 - [ ] better understand reverse resolution & how that pertains to L2 primary names and impacts the future schema, etc
 - [ ] subgraph graphql implementation within ponder
