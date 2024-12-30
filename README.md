@@ -35,6 +35,15 @@ estimated backfill time @ 50rps = 24-36 hours on M1 Macbook (~10x speedup)
 - [x] implement ethRegistry
 - [ ] implement nameWrapper
 - [ ] ? implement upserts in nameWrapper to support later startblocks for testing?
+#### known bugs
+
+- [ ] there's an account `0x` in the database, which is definitely a bug — perhaps all addresses should go through `viem/getAddress` before being handled (presumably ponder did this inthe background...)
+- [ ] root domain is not migrated, probably should be
+
+#### next up
+
+- [ ] implement checkpointing for faster devx
+- [ ] implement/verify nameWrapper
 - [ ] confirm all the schema relations are configured correctly
 - [ ] better understand reverse resolution & how that pertains to L2 primary names and impacts the future schema, etc
 - [ ] subgraph graphql implementation within ponder
@@ -47,8 +56,10 @@ estimated backfill time @ 50rps = 24-36 hours on M1 Macbook (~10x speedup)
 - [ ] run the relevant tests from ensjs against our indexer to increase confidence
   - probably requires a fork of ensjs, update the publicClient instantiation, and scope tests to that dir
 - [ ] integrate rainbow tables for label healing
-  - load the tabel dump into pglite & query synchronously to match existing behavior
+  - load the table dump into pglite (or just postgres) & query synchronously to match existing behavior
   - https://github.com/graphprotocol/ens-rainbow
+- [ ] implement CI/CD
+  - likely best to wait until historical log cache is speedy
 
 ## confidence
 

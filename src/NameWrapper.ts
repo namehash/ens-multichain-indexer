@@ -1,6 +1,7 @@
 import { type Context, type Event, ponder } from "ponder:registry";
 import { domains, wrappedDomains } from "ponder:schema";
 import { type Address, type Hex, stringToBytes } from "viem";
+import { loadCheckpoint } from "./lib/checkpoints";
 import {
   NAMEHASH_ETH,
   checkPccBurned,
@@ -10,6 +11,10 @@ import {
 import { bigintMax } from "./lib/helpers";
 import { makeEventId } from "./lib/ids";
 import { upsertAccount } from "./lib/upserts";
+
+ponder.on("NameWrapper:setup", async ({ context }) => {
+  await loadCheckpoint(context);
+});
 
 // if the wrappedDomain in question has pcc burned (?) and a higher (?) expiry date, update the domain's expiryDate
 async function materializeDomainExpiryDate(context: Context, node: Hex) {
