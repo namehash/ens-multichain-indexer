@@ -81,7 +81,7 @@ const _handleNewOwner =
     // note that we set isMigrated so that if this domain is being interacted with on the new registry, its migration status is set here
     let domain = await context.db.find(domains, { id: subnode });
     if (domain) {
-      // if the domain already exists, this is just an update of the owner record.
+      // if the domain already exists, this is just an update of the owner record (& isMigrated)
       await context.db.update(domains, { id: domain.id }).set({ ownerId: owner, isMigrated });
     } else {
       // otherwise create the domain

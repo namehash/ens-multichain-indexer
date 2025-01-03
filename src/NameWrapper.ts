@@ -101,6 +101,7 @@ ponder.on("NameWrapper:NameUnwrapped", async ({ context, event }) => {
   await upsertAccount(context, owner);
 
   await context.db.update(domains, { id: node }).set((domain) => ({
+    // null expiry date if the domain is not a direct child of .eth
     // https://github.com/ensdomains/ens-subgraph/blob/master/src/nameWrapper.ts#L123
     ...(domain.expiryDate && domain.parentId !== NAMEHASH_ETH && { expiryDate: null }),
     ownerId: owner,
