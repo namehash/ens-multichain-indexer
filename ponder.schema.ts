@@ -35,16 +35,11 @@ export const domains = onchainTable("domains", (t) => ({
   // The account that owns the ERC721 NFT for the domain
   registrantId: t.hex("registrant_id"),
   // The account that owns the wrapped domain
+  // NOTE: this should just be resolved through wrappedDomain.owner
   wrappedOwnerId: t.hex("wrapped_owner_id"),
 
   // The expiry date for the domain, from either the registration, or the wrapped domain if PCC is burned
   expiryDate: t.bigint("expiry_date"),
-
-  // The registration associated with the domain
-  // registration: Registration @derivedFrom(field: "domain")
-
-  // "The wrapped domain associated with the domain"
-  // wrappedDomain: WrappedDomain @derivedFrom(field: "domain")
 
   // "The events associated with the domain"
   // events: [DomainEvent!]! @derivedFrom(field: "domain")
@@ -72,6 +67,18 @@ export const domainRelations = relations(domains, ({ one, many }) => ({
   wrappedOwner: one(accounts, {
     fields: [domains.wrappedOwnerId],
     references: [accounts.id],
+  }),
+
+  // The wrapped domain associated with the domain
+  wrappedDomain: one(wrappedDomains, {
+    fields: [domains.id],
+    references: [wrappedDomains.domainId],
+  }),
+
+  // The registration associated with the domain
+  registration: one(registrations, {
+    fields: [domains.id],
+    references: [registrations.domainId],
   }),
 }));
 
@@ -144,6 +151,32 @@ export const registrationRelations = relations(registrations, ({ one }) => ({
   }),
   registrant: one(accounts, {
     fields: [registrations.registrantId],
+    references: [accounts.id],
+  }),
+}));
+
+export const wrappedDomains = onchainTable("wrapped_domains", (t) => ({
+  // The unique identifier for each instance of the WrappedDomain entity
+  id: t.hex().primaryKey(),
+  // The domain that is wrapped by this WrappedDomain
+  domainId: t.hex("domain_id").notNull(),
+  // The expiry date of the wrapped domain
+  expiryDate: t.bigint("expiry_date").notNull(),
+  // The number of fuses remaining on the wrapped domain
+  fuses: t.integer().notNull(),
+  // The account that owns this WrappedDomain
+  ownerId: t.hex("owner_id").notNull(),
+  // The name of the wrapped domain
+  name: t.text(),
+}));
+
+export const wrappedDomainRelations = relations(wrappedDomains, ({ one }) => ({
+  domain: one(domains, {
+    fields: [wrappedDomains.domainId],
+    references: [domains.id],
+  }),
+  owner: one(accounts, {
+    fields: [wrappedDomains.ownerId],
     references: [accounts.id],
   }),
 }));
