@@ -1,15 +1,25 @@
-import { type Context, type Event, ponder } from "ponder:registry";
+import { type Context, type Event } from "ponder:registry";
 import { resolvers } from "ponder:schema";
 import { domains } from "ponder:schema";
 import { type Hex, zeroAddress } from "viem";
-import { NAMEHASH_ZERO, encodeLabelhash, makeSubnodeNamehash } from "./lib/ens-helpers";
-import { makeResolverId } from "./lib/ids";
-import { upsertAccount } from "./lib/upserts";
+import { NAMEHASH_ZERO, encodeLabelhash, makeSubnodeNamehash } from "../lib/ens-helpers";
+import { makeResolverId } from "../lib/ids";
+import { NsReturnType } from "../lib/plugins";
+import { upsertAccount } from "../lib/upserts";
 
-// a domain is migrated iff it exists and isMigrated is set to true, otherwise it is not
-async function isDomainMigrated(context: Context, node: Hex) {
-  const domain = await context.db.find(domains, { id: node });
-  return domain?.isMigrated ?? false;
+type NsType<T extends string> = NsReturnType<T, "/eth">;
+
+export async function setup({ context }: { context: Context }) {
+  // ensure we have an account for the zeroAddress
+  await upsertAccount(context, zeroAddress);
+
+  // ensure we have a root Domain, owned by the zeroAddress, that is default not migrated
+  await context.db.insert(domains).values({
+    id: NAMEHASH_ZERO,
+    ownerId: zeroAddress,
+    createdAt: 0n,
+    isMigrated: false,
+  });
 }
 
 function isDomainEmpty(domain: typeof domains.$inferSelect) {
@@ -35,12 +45,12 @@ async function recursivelyRemoveEmptyDomainFromParentSubdomainCount(context: Con
   }
 }
 
-async function _handleTransfer({
+export async function handleTransfer({
   context,
   event,
 }: {
   context: Context;
-  event: Event<"Registry:Transfer">;
+  event: Event<NsType<"Registry:Transfer">>;
 }) {
   const { node, owner } = event.args;
 
@@ -61,14 +71,14 @@ async function _handleTransfer({
   // TODO: log DomainEvent
 }
 
-const _handleNewOwner =
+export const handleNewOwner =
   (isMigrated: boolean) =>
   async ({
     context,
     event,
   }: {
     context: Context;
-    event: Event<"Registry:NewOwner">;
+    event: Event<NsType<"Registry:NewOwner">>;
   }) => {
     const { label, node, owner } = event.args;
 
@@ -116,12 +126,12 @@ const _handleNewOwner =
     }
   };
 
-async function _handleNewTTL({
+export async function handleNewTTL({
   context,
   event,
 }: {
   context: Context;
-  event: Event<"Registry:NewTTL">;
+  event: Event<NsType<"Registry:NewTTL">>;
 }) {
   const { node, ttl } = event.args;
 
@@ -133,12 +143,12 @@ async function _handleNewTTL({
   // TODO: log DomainEvent
 }
 
-async function _handleNewResolver({
+export async function handleNewResolver({
   context,
   event,
 }: {
   context: Context;
-  event: Event<"Registry:NewResolver">;
+  event: Event<NsType<"Registry:NewResolver">>;
 }) {
   const { node, resolver: resolverAddress } = event.args;
 
@@ -170,56 +180,3 @@ async function _handleNewResolver({
 
   // TODO: log DomainEvent
 }
-
-// setup on old registry
-ponder.on("RegistryOld:setup", async ({ context }) => {
-  // ensure we have an account for the zeroAddress
-  await upsertAccount(context, zeroAddress);
-
-  // ensure we have a root Domain, owned by the zeroAddress
-  await context.db.insert(domains).values({
-    id: NAMEHASH_ZERO,
-    ownerId: zeroAddress,
-    createdAt: 0n,
-    isMigrated: false,
-  });
-});
-
-// old registry functions are proxied to the current handlers
-// iff the domain has not yet been migrated
-ponder.on("RegistryOld:NewOwner", async ({ context, event }) => {
-  const node = makeSubnodeNamehash(event.args.node, event.args.label);
-  const isMigrated = await isDomainMigrated(context, node);
-  if (isMigrated) return;
-  return _handleNewOwner(false)({ context, event });
-});
-
-ponder.on("RegistryOld:NewResolver", async ({ context, event }) => {
-  // NOTE: the subgraph makes an exception for the root node here
-  // but i don't know that that's necessary, as in ponder our root node starts out
-  // unmigrated and once the NewOwner event is emitted by the new registry,
-  // the root will be considered migrated
-  // https://github.com/ensdomains/ens-subgraph/blob/master/src/ensRegistry.ts#L246
-
-  // otherwise, only handle iff not migrated
-  const isMigrated = await isDomainMigrated(context, event.args.node);
-  if (isMigrated) return;
-  return _handleNewResolver({ context, event });
-});
-
-ponder.on("RegistryOld:NewTTL", async ({ context, event }) => {
-  const isMigrated = await isDomainMigrated(context, event.args.node);
-  if (isMigrated) return;
-  return _handleNewTTL({ context, event });
-});
-
-ponder.on("RegistryOld:Transfer", async ({ context, event }) => {
-  const isMigrated = await isDomainMigrated(context, event.args.node);
-  if (isMigrated) return;
-  return _handleTransfer({ context, event });
-});
-
-ponder.on("Registry:NewOwner", _handleNewOwner(true));
-ponder.on("Registry:NewResolver", _handleNewResolver);
-ponder.on("Registry:NewTTL", _handleNewTTL);
-ponder.on("Registry:Transfer", _handleTransfer);

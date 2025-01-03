@@ -3,6 +3,7 @@ import { type Hex, concat, keccak256, namehash, toHex } from "viem";
 // TODO: pull from ens utils lib or something
 export const NAMEHASH_ZERO = namehash("");
 export const NAMEHASH_ETH = namehash("eth");
+export const NAMEHASH_BASE_ETH = namehash("base.eth");
 
 // TODO: this should probably be a part of some ens util lib
 export const makeSubnodeNamehash = (node: Hex, label: Hex) => keccak256(concat([node, label]));
