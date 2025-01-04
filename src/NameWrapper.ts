@@ -105,7 +105,11 @@ ponder.on("NameWrapper:NameUnwrapped", async ({ context, event }) => {
     // https://github.com/ensdomains/ens-subgraph/blob/master/src/nameWrapper.ts#L123
     ...(domain.expiryDate && domain.parentId !== NAMEHASH_ETH && { expiryDate: null }),
     ownerId: owner,
+    wrappedOwnerId: null,
   }));
+
+  // delete the WrappedDomain
+  await context.db.delete(wrappedDomains, { id: node });
 
   // TODO: log NameUnwrapped
 });
