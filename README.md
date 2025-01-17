@@ -2,6 +2,53 @@
 
 > a multichain ENS indexer, powered by Ponder
 
+## Quick start
+
+### Prerequisites
+
+- [Git](https://git-scm.com/)
+- [Node.js](https://nodejs.org/)
+  - It's recommended you install Node.js through [nvm](https://github.com/nvm-sh/nvm) (see link for installation instructions).
+  - To ensure you're running the expected version of Node.js run `nvm install` in the root of the repository (after you clone it).
+  - Node.js will automatically install `corepack`. You should also ensure Corepack is enabled by running `corepack enable`.
+- [pnpm](https://pnpm.io/)
+  - Run `npm install -g pnpm` or see [other installation options](https://pnpm.io/installation).
+  - To ensure you're running the expected version of pnpm run `corepack use pnpm` in the root of the repository (after you clone it).
+
+### Run the indexer
+
+Clone this repository:
+```
+git clone git@github.com:namehash/ens-multichain-indexer.git
+cd ens-multichain-indexer
+```
+
+Install dependencies:
+```
+pnpm install
+```
+
+Configure for your local environment:
+```
+cp .env.local.example .env.local
+```
+then review the docs inside your .env.local file for configuration instructions.
+
+- `ACTIVE_PLUGIN` — set the plugin name you’d like to activate (`eth`, `base.eth`, or `linea.eth`). The activated plugin determines which contracts and chains are indexed. Currently only a single plugin can be activated at a time. Soon we will remove this constraint to allow multiple plugins to be activated concurrently.
+- `RPC_URL_*` — optional, but you can use private ones to speed the syncing process up
+- `DATABASE_SCHEMA` is arbitrary, with the limitations mentioned in the linked documentation
+- `DATABASE_URL` is your postgres database connection string
+
+Once your `.env.local` is configured, launch the indexer by running:
+- `pnpm ponder dev` for development mode,
+- `pnpm ponder start` for production mode.
+
+To learn more about those commands, go to https://ponder.sh/docs/api-reference/ponder-cli#dev
+
+## Overview
+
+### `eth` plugin
+
 estimated backfill time @ 50rps = 24-36 hours on M1 Macbook (~10x speedup)
 
 ### goals
