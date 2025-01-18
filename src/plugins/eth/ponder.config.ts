@@ -21,7 +21,7 @@ export const pluginNamespace = createPluginNamespace(ownedName);
 // constrain the ponder indexing between the following start/end blocks
 // https://ponder.sh/0_6/docs/contracts-and-networks#block-range
 const START_BLOCK: ContractConfig["startBlock"] = undefined;
-const END_BLOCK: ContractConfig["endBlock"] = 21_000_000;
+const END_BLOCK: ContractConfig["endBlock"] = 4_000_000;
 
 const REGISTRY_OLD_ADDRESS = "0x314159265dd8dbb310642f98f50c066173c1259b";
 const REGISTRY_ADDRESS = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";

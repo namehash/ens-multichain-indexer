@@ -6,6 +6,7 @@
  * 2. removes ponder's encoded id params in favor of literal ids
  * 3. implement subgraph's simpler pagination style with first & skip w/out Page types
  * 4. PascalCase entity names
+ * 5. Hardcoded Polymorphic Event Types
  */
 
 // here we inline the following types from this original import
@@ -70,6 +71,8 @@ import {
   PgTableExtraConfig,
   TableConfig,
   isPgEnum,
+  union,
+  unionAll,
 } from "drizzle-orm/pg-core";
 import {
   GraphQLBoolean,
@@ -82,6 +85,7 @@ import {
   GraphQLInputObjectType,
   type GraphQLInputType,
   GraphQLInt,
+  GraphQLInterfaceType,
   GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
@@ -89,6 +93,7 @@ import {
   GraphQLScalarType,
   GraphQLSchema,
   GraphQLString,
+  GraphQLUnionType,
 } from "graphql";
 import { GraphQLJSON } from "graphql-scalars";
 
@@ -115,6 +120,64 @@ const OrderDirectionEnum = new GraphQLEnumType({
   values: {
     asc: { value: "asc" },
     desc: { value: "desc" },
+  },
+});
+
+/**
+ * Polymorphic Event TsNames
+ */
+
+const DomainEventTsNames = [
+  "transfer",
+  "newOwner",
+  "newResolver",
+  "newTTL",
+  "wrappedTransfer",
+  "nameWrapped",
+  "nameUnwrapped",
+  "fusesSet",
+  "expiryExtended",
+];
+
+const RegistrationEventTsNames = ["nameRegistered", "nameRenewed", "nameTransferred"];
+
+const ResolverEventTsNames = [
+  "addrChanged",
+  "multicoinAddrChanged",
+  "nameChanged",
+  "abiChanged",
+  "pubkeyChanged",
+  "textChanged",
+  "contenthashChanged",
+  "interfaceChanged",
+  "authorisationChanged",
+  "versionChanged",
+];
+
+const DomainEvent = new GraphQLInterfaceType({
+  name: "DomainEvent",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLString) },
+    blockNumber: { type: new GraphQLNonNull(GraphQLInt) },
+    transactionID: { type: new GraphQLNonNull(GraphQLString) },
+  },
+});
+
+const RegistrationEvent = new GraphQLInterfaceType({
+  name: "RegistrationEvent",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLString) },
+    blockNumber: { type: new GraphQLNonNull(GraphQLInt) },
+    transactionID: { type: new GraphQLNonNull(GraphQLString) },
+  },
+});
+
+const ResolverEvent = new GraphQLInterfaceType({
+  name: "ResolverEvent",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLString) },
+    blockNumber: { type: new GraphQLNonNull(GraphQLInt) },
+    transactionID: { type: new GraphQLNonNull(GraphQLString) },
   },
 });
 
@@ -154,7 +217,7 @@ export function buildGraphQLSchema(schema: Schema): GraphQLSchema {
     // TODO: relationships i.e. parent__labelName iff necessary
 
     entityOrderByEnums[table.tsName] = new GraphQLEnumType({
-      name: `${pascalCase(table.tsName)}_orderBy`,
+      name: `${getSubgraphEntityName(table.tsName)}_orderBy`,
       values,
     });
   }
@@ -162,7 +225,7 @@ export function buildGraphQLSchema(schema: Schema): GraphQLSchema {
   const entityFilterTypes: Record<string, GraphQLInputObjectType> = {};
   for (const table of tables) {
     const filterType = new GraphQLInputObjectType({
-      name: `${table.tsName}Filter`,
+      name: `${table.tsName}_filter`,
       fields: () => {
         const filterFields: GraphQLInputFieldConfigMap = {
           // Logical operators
@@ -235,7 +298,13 @@ export function buildGraphQLSchema(schema: Schema): GraphQLSchema {
 
   for (const table of tables) {
     entityTypes[table.tsName] = new GraphQLObjectType({
-      name: pascalCase(table.tsName), // NOTE: PascalCase to match subgraph
+      name: getSubgraphEntityName(table.tsName),
+      // polymorphic event interface logic
+      interfaces: [
+        ...(DomainEventTsNames.includes(table.tsName) ? [DomainEvent] : []),
+        ...(RegistrationEventTsNames.includes(table.tsName) ? [RegistrationEvent] : []),
+        ...(ResolverEventTsNames.includes(table.tsName) ? [ResolverEvent] : []),
+      ],
       fields: () => {
         const fieldConfigMap: GraphQLFieldConfigMap<Parent, Context> = {};
 
@@ -417,6 +486,104 @@ export function buildGraphQLSchema(schema: Schema): GraphQLSchema {
       },
     };
   }
+
+  /**
+   * Polymorphic Event Logic
+   *
+   * Not super happy with how this is implemented but it gets the job done.
+   *
+   */
+
+  entityTypes["domain"]!.getFields().events = {
+    name: "events",
+    type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(DomainEvent))),
+    args: [],
+    description: "The events associated with the domain",
+    deprecationReason: undefined,
+    extensions: {},
+    astNode: undefined,
+    resolve: async (parent, _args, { drizzle }) => {
+      const eventTables = tables.filter((t) => DomainEventTsNames.includes(t.tsName));
+      const results = await Promise.all(
+        eventTables.map((t) =>
+          drizzle.query[t.tsName]!.findMany({
+            where: eq(t.columns["domainId"]!, parent.id),
+          }),
+        ),
+      );
+
+      return results
+        .flatMap((events, i) =>
+          events.map((event) => ({
+            ...event,
+            __typename: getSubgraphEntityName(eventTables[i]!.tsName),
+          })),
+        )
+        .sort(sortByBlockNumber);
+    },
+  };
+
+  entityTypes["registration"]!.getFields().events = {
+    name: "events",
+    type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(RegistrationEvent))),
+    args: [],
+    description: "The events associated with the registration",
+    deprecationReason: undefined,
+    extensions: {},
+    astNode: undefined,
+    resolve: async (parent, _args, { drizzle }) => {
+      const eventTables = tables.filter((t) => RegistrationEventTsNames.includes(t.tsName));
+      const results = await Promise.all(
+        eventTables.map((t) =>
+          drizzle.query[t.tsName]!.findMany({
+            where: eq(t.columns["registrationId"]!, parent.id),
+          }),
+        ),
+      );
+
+      return results
+        .flatMap((events, i) =>
+          events.map((event) => ({
+            ...event,
+            __typename: getSubgraphEntityName(eventTables[i]!.tsName),
+          })),
+        )
+        .sort(sortByBlockNumber);
+    },
+  };
+
+  entityTypes["resolver"]!.getFields().events = {
+    name: "events",
+    type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(ResolverEvent))),
+    args: [],
+    description: "The events associated with the resolver",
+    deprecationReason: undefined,
+    extensions: {},
+    astNode: undefined,
+    resolve: async (parent, _args, { drizzle }) => {
+      const eventTables = tables.filter((t) => ResolverEventTsNames.includes(t.tsName));
+      const results = await Promise.all(
+        eventTables.map((t) =>
+          drizzle.query[t.tsName]!.findMany({
+            where: eq(t.columns["resolverId"]!, parent.id),
+          }),
+        ),
+      );
+
+      return results
+        .flatMap((events, i) =>
+          events.map((event) => ({
+            ...event,
+            __typename: getSubgraphEntityName(eventTables[i]!.tsName),
+          })),
+        )
+        .sort(sortByBlockNumber);
+    },
+  };
+
+  /**
+   * ok back to ponder's regularly scheduled programming
+   */
 
   queryFields._meta = {
     type: GraphQLMeta,
@@ -744,4 +911,14 @@ export function buildDataLoaderCache({ drizzle }: { drizzle: Drizzle<Schema> }) 
 function getColumnTsName(column: Column) {
   const tableColumns = getTableColumns(column.table);
   return Object.entries(tableColumns).find(([_, c]) => c.name === column.name)![0];
+}
+
+function getSubgraphEntityName(tsName: string) {
+  if (tsName === "newTTL") return "NewTTL";
+  // if (tsName === "contentHashChanged") return "ContenthashChanged";
+  return pascalCase(tsName);
+}
+
+function sortByBlockNumber(a: { blockNumber: number }, b: { blockNumber: number }) {
+  return a.blockNumber - b.blockNumber;
 }

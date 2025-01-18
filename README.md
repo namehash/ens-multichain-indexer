@@ -25,6 +25,8 @@ estimated mainnet-only backfill time @ <=500rps = **~13 hours** on M1 Macbook (>
 
 ## next up
 
+- [ ] implement events
+- [ ] implement polymorphic events resolver on each relevant entity
 - [ ] `_nocase` case-insensitive where filters
   - not used interally but ensjs does technically expose this as an available filter to users
 - [ ] confirm all the schema relations are configured correctly
