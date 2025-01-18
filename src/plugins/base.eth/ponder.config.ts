@@ -1,5 +1,5 @@
 import { type ContractConfig, createConfig, factory } from "ponder";
-import { http, getAbiItem } from "viem";
+import { http } from "viem";
 import { base } from "viem/chains";
 
 import { blockConfig, rpcEndpointUrl, rpcMaxRequestsPerSecond } from "../../lib/helpers";
@@ -37,12 +37,24 @@ export const config = createConfig({
     [pluginNamespace("Resolver")]: {
       network: "base",
       abi: L2Resolver,
-      address: factory({
-        address: "0xb94704422c2a1e396835a571837aa5ae53285a95",
-        event: getAbiItem({ abi: Registry, name: "NewResolver" }),
-        parameter: "resolver",
-      }),
-      ...blockConfig(START_BLOCK, 17575714, END_BLOCK),
+      // NOTE: this indexes every event ever emitted that looks like this
+      filter: {
+        event: [
+          "AddrChanged",
+          "AddressChanged",
+          "NameChanged",
+          "ABIChanged",
+          "PubkeyChanged",
+          "TextChanged",
+          "ContenthashChanged",
+          "InterfaceChanged",
+          "VersionChanged",
+          "DNSRecordChanged",
+          "DNSRecordDeleted",
+          "DNSZonehashChanged",
+        ],
+      },
+      ...blockConfig(START_BLOCK, 17571480, END_BLOCK),
     },
     [pluginNamespace("BaseRegistrar")]: {
       network: "base",

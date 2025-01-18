@@ -1,5 +1,18 @@
 # graphql info/spec
 
+## backwards-compatibility notes
+
+the following features of the subgraph graphql api are explicitly unsupported, because they are not used by ensjs or ens-app-v3
+
+- [fulltext search queries](https://thegraph.com/docs/en/subgraphs/querying/graphql-api/#fulltext-search-queries)
+- 1-level-nested Entity `_orderBy` param
+- subgraph `_Meta_` object (ponder's `_meta` is available)
+
+## notes
+
+- offset queries slow? `CLUSTER` your table so scans are faster
+  - `CLUSTER public.domains USING domains_pkey;`
+
 ## goals
 
 1. ponder indexer 1:1 equivalency of results as compared to subgraph

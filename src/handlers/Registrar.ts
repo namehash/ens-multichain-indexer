@@ -18,7 +18,9 @@ export const makeRegistrarHandlers = (ownedName: `${string}eth`) => {
 
     const node = makeSubnodeNamehash(ownedSubnameNode, label);
     const domain = await context.db.find(schema.domain, { id: node });
-    if (!domain) throw new Error("domain expected");
+
+    // encode the runtime assertion here https://github.com/ensdomains/ens-subgraph/blob/master/src/ethRegistrar.ts#L101
+    if (!domain) throw new Error("domain expected in setNamePreimage but not found");
 
     if (domain.labelName !== name) {
       await context.db

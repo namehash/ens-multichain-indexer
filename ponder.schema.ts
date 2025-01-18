@@ -17,7 +17,7 @@ export const domain = onchainTable("domains", (t) => ({
   subdomainCount: t.integer("subdomain_count").notNull().default(0),
 
   // Address logged from current resolver, if any
-  resolvedAddress: t.hex("resolved_address"),
+  resolvedAddressId: t.hex("resolved_address_id"),
 
   // The resolver that controls the domain's settings
   resolverId: t.text(),
@@ -45,7 +45,10 @@ export const domain = onchainTable("domains", (t) => ({
 }));
 
 export const domainRelations = relations(domain, ({ one, many }) => ({
-  // has one owner
+  resolvedAddress: one(account, {
+    fields: [domain.resolvedAddressId],
+    references: [account.id],
+  }),
   owner: one(account, {
     fields: [domain.ownerId],
     references: [account.id],
@@ -105,9 +108,11 @@ export const resolver = onchainTable("resolvers", (t) => ({
   // The content hash for this resolver, in binary format
   contentHash: t.text("content_hash"),
   // The set of observed text record keys for this resolver
-  texts: t.text().array().notNull().default([]),
+  // NOTE: we avoid .notNull.default([]) to match subgraph behavior
+  texts: t.text().array(),
   // The set of observed SLIP-44 coin types for this resolver
-  coinTypes: t.bigint("coin_types").array().notNull().default([]),
+  // NOTE: we avoid .notNull.default([]) to match subgraph behavior
+  coinTypes: t.bigint("coin_types").array(),
 
   // TODO: has many events
 }));

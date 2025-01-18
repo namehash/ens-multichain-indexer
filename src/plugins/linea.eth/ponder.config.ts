@@ -37,11 +37,23 @@ export const config = createConfig({
     [pluginNamespace("Resolver")]: {
       network: "linea",
       abi: Resolver,
-      address: factory({
-        address: "0x50130b669B28C339991d8676FA73CF122a121267",
-        event: getAbiItem({ abi: Registry, name: "NewResolver" }),
-        parameter: "resolver",
-      }),
+      // NOTE: this indexes every event ever emitted that looks like this
+      filter: {
+        event: [
+          "AddrChanged",
+          "AddressChanged",
+          "NameChanged",
+          "ABIChanged",
+          "PubkeyChanged",
+          "TextChanged",
+          "ContenthashChanged",
+          "InterfaceChanged",
+          "VersionChanged",
+          "DNSRecordChanged",
+          "DNSRecordDeleted",
+          "DNSZonehashChanged",
+        ],
+      },
       ...blockConfig(START_BLOCK, 6682888, END_BLOCK),
     },
     [pluginNamespace("BaseRegistrar")]: {

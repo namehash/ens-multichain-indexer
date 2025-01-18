@@ -1,5 +1,5 @@
-import { ContractConfig, createConfig, factory, mergeAbis } from "ponder";
-import { http, getAbiItem } from "viem";
+import { ContractConfig, createConfig, mergeAbis } from "ponder";
+import { http } from "viem";
 
 import { mainnet } from "viem/chains";
 import { blockConfig, rpcEndpointUrl, rpcMaxRequestsPerSecond } from "../../lib/helpers";
@@ -21,7 +21,10 @@ export const pluginNamespace = createPluginNamespace(ownedName);
 // constrain indexing between the following start/end blocks
 // https://ponder.sh/0_6/docs/contracts-and-networks#block-range
 const START_BLOCK: ContractConfig["startBlock"] = undefined;
-const END_BLOCK: ContractConfig["endBlock"] = undefined;
+const END_BLOCK: ContractConfig["endBlock"] = 21_000_000;
+
+const REGISTRY_OLD_ADDRESS = "0x314159265dd8dbb310642f98f50c066173c1259b";
+const REGISTRY_ADDRESS = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
 
 export const config = createConfig({
   networks: {
@@ -35,34 +38,38 @@ export const config = createConfig({
     [pluginNamespace("RegistryOld")]: {
       network: "mainnet",
       abi: Registry,
-      address: "0x314159265dd8dbb310642f98f50c066173c1259b",
+      address: REGISTRY_OLD_ADDRESS,
       ...blockConfig(START_BLOCK, 3327417, END_BLOCK),
     },
     [pluginNamespace("Registry")]: {
       network: "mainnet",
       abi: Registry,
-      address: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
-      ...blockConfig(START_BLOCK, 9380380, END_BLOCK),
-    },
-    [pluginNamespace("OldRegistryResolvers")]: {
-      network: "mainnet",
-      abi: RESOLVER_ABI,
-      address: factory({
-        address: "0x314159265dd8dbb310642f98f50c066173c1259b",
-        event: getAbiItem({ abi: Registry, name: "NewResolver" }),
-        parameter: "resolver",
-      }),
+      address: REGISTRY_ADDRESS,
       ...blockConfig(START_BLOCK, 9380380, END_BLOCK),
     },
     [pluginNamespace("Resolver")]: {
       network: "mainnet",
       abi: RESOLVER_ABI,
-      address: factory({
-        address: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
-        event: getAbiItem({ abi: Registry, name: "NewResolver" }),
-        parameter: "resolver",
-      }),
-      ...blockConfig(START_BLOCK, 9380380, END_BLOCK),
+      // NOTE: this indexes every event ever emitted that looks like this
+      filter: {
+        event: [
+          "AddrChanged",
+          "AddressChanged",
+          "NameChanged",
+          "ABIChanged",
+          "PubkeyChanged",
+          "TextChanged(bytes32 indexed node, string indexed indexedKey, string key)",
+          "TextChanged(bytes32 indexed node, string indexed indexedKey, string key, string value)",
+          "ContenthashChanged",
+          "InterfaceChanged",
+          "AuthorisationChanged",
+          "VersionChanged",
+          "DNSRecordChanged",
+          "DNSRecordDeleted",
+          "DNSZonehashChanged",
+        ],
+      },
+      ...blockConfig(START_BLOCK, 3327417, END_BLOCK),
     },
     [pluginNamespace("BaseRegistrar")]: {
       network: "mainnet",

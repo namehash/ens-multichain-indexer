@@ -6,6 +6,12 @@ import { upsertAccount, upsertResolver } from "../lib/db-helpers";
 import { hasNullByte, uniq } from "../lib/helpers";
 import { makeResolverId } from "../lib/ids";
 
+// NOTE: both subgraph and this indexer us upserts in this file because a 'Resolver' is _any_
+// contract on the chain that emits an event with this signature, which may or may not actually be
+// an ENS-specific Resolver. because of this each even could theoretically be the first event the
+// indexer has seen for a given Resolver id and therefore needs to use an upsert and not assume
+// anything else about this Resolver's state
+
 export async function handleAddrChanged({
   context,
   event,
@@ -19,7 +25,7 @@ export async function handleAddrChanged({
   const { a: address, node } = event.args;
   await upsertAccount(context, address);
 
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   await upsertResolver(context, {
     id,
     domainId: node,
@@ -27,10 +33,10 @@ export async function handleAddrChanged({
     addrId: address,
   });
 
-  // materialize the resolved add to the domain iff this resolver is active
+  // materialize the resolved addr to the domain iff this resolver is active
   const domain = await context.db.find(schema.domain, { id: node });
   if (domain?.resolverId === id) {
-    await context.db.update(schema.domain, { id: node }).set({ resolvedAddress: address });
+    await context.db.update(schema.domain, { id: node }).set({ resolvedAddressId: address });
   }
 
   // TODO: log ResolverEvent
@@ -49,7 +55,7 @@ export async function handleAddressChanged({
   const { node, coinType, newAddress } = event.args;
   await upsertAccount(context, newAddress);
 
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   const resolver = await upsertResolver(context, {
     id,
     domainId: node,
@@ -59,7 +65,7 @@ export async function handleAddressChanged({
   // upsert the new coinType
   await context.db
     .update(schema.resolver, { id })
-    .set({ coinTypes: uniq([...resolver.coinTypes, coinType]) });
+    .set({ coinTypes: uniq([...(resolver.coinTypes ?? []), coinType]) });
 
   // TODO: log ResolverEvent
 }
@@ -77,7 +83,7 @@ export async function handleNameChanged({
   const { node, name } = event.args;
   if (hasNullByte(name)) return;
 
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   await upsertResolver(context, {
     id,
     domainId: node,
@@ -98,7 +104,7 @@ export async function handleABIChanged({
   };
 }) {
   const { node } = event.args;
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   const resolver = await upsertResolver(context, {
     id,
     domainId: node,
@@ -119,7 +125,7 @@ export async function handlePubkeyChanged({
   };
 }) {
   const { node } = event.args;
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   const resolver = await upsertResolver(context, {
     id,
     domainId: node,
@@ -140,7 +146,7 @@ export async function handleTextChanged({
   };
 }) {
   const { node, key } = event.args;
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   const resolver = await upsertResolver(context, {
     id,
     domainId: node,
@@ -148,7 +154,9 @@ export async function handleTextChanged({
   });
 
   // upsert new key
-  await context.db.update(schema.resolver, { id }).set({ texts: uniq([...resolver.texts, key]) });
+  await context.db
+    .update(schema.resolver, { id })
+    .set({ texts: uniq([...(resolver.texts ?? []), key]) });
 
   // TODO: log ResolverEvent
 }
@@ -164,7 +172,7 @@ export async function handleContenthashChanged({
   };
 }) {
   const { node, hash } = event.args;
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   await upsertResolver(context, {
     id,
     domainId: node,
@@ -190,7 +198,7 @@ export async function handleInterfaceChanged({
   };
 }) {
   const { node } = event.args;
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   await upsertResolver(context, {
     id,
     domainId: node,
@@ -216,7 +224,7 @@ export async function handleAuthorisationChanged({
   };
 }) {
   const { node } = event.args;
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   await upsertResolver(context, {
     id,
     domainId: node,
@@ -241,17 +249,20 @@ export async function handleVersionChanged({
 }) {
   // a version change nulls out the resolver
   const { node } = event.args;
-  const id = makeResolverId(node, event.log.address);
+  const id = makeResolverId(event.log.address, node);
   const domain = await context.db.find(schema.domain, { id: node });
-  if (!domain) throw new Error("domain expected");
 
-  // materialize the Domain's resolvedAddress field
-  if (domain.resolverId === id) {
-    await context.db.update(schema.domain, { id: node }).set({ resolvedAddress: null });
+  // materialize the Domain's resolvedAddress field iff exists and is set to this Resolver
+  if (domain && domain.resolverId === id) {
+    await context.db.update(schema.domain, { id: node }).set({ resolvedAddressId: null });
   }
 
-  // clear out the resolver's info
-  await context.db.update(schema.resolver, { id }).set({
+  await upsertResolver(context, {
+    id,
+    domainId: node,
+    address: event.log.address,
+
+    // clear out the resolver's info
     addrId: null,
     contentHash: null,
     coinTypes: [],

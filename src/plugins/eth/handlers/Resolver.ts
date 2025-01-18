@@ -17,36 +17,6 @@ import {
 import { pluginNamespace } from "../ponder.config";
 
 export default function () {
-  // Old registry handlers
-  ponder.on(pluginNamespace("OldRegistryResolvers:AddrChanged"), handleAddrChanged);
-  ponder.on(pluginNamespace("OldRegistryResolvers:AddressChanged"), handleAddressChanged);
-  ponder.on(pluginNamespace("OldRegistryResolvers:NameChanged"), handleNameChanged);
-  ponder.on(pluginNamespace("OldRegistryResolvers:ABIChanged"), handleABIChanged);
-  ponder.on(pluginNamespace("OldRegistryResolvers:PubkeyChanged"), handlePubkeyChanged);
-  ponder.on(
-    pluginNamespace(
-      "OldRegistryResolvers:TextChanged(bytes32 indexed node, string indexed indexedKey, string key)",
-    ),
-    handleTextChanged,
-  );
-  ponder.on(
-    pluginNamespace(
-      "OldRegistryResolvers:TextChanged(bytes32 indexed node, string indexed indexedKey, string key, string value)",
-    ),
-    handleTextChanged,
-  );
-  ponder.on(pluginNamespace("OldRegistryResolvers:ContenthashChanged"), handleContenthashChanged);
-  ponder.on(pluginNamespace("OldRegistryResolvers:InterfaceChanged"), handleInterfaceChanged);
-  ponder.on(
-    pluginNamespace("OldRegistryResolvers:AuthorisationChanged"),
-    handleAuthorisationChanged,
-  );
-  ponder.on(pluginNamespace("OldRegistryResolvers:VersionChanged"), handleVersionChanged);
-  ponder.on(pluginNamespace("OldRegistryResolvers:DNSRecordChanged"), handleDNSRecordChanged);
-  ponder.on(pluginNamespace("OldRegistryResolvers:DNSRecordDeleted"), handleDNSRecordDeleted);
-  ponder.on(pluginNamespace("OldRegistryResolvers:DNSZonehashChanged"), handleDNSZonehashChanged);
-
-  // New registry handlers
   ponder.on(pluginNamespace("Resolver:AddrChanged"), handleAddrChanged);
   ponder.on(pluginNamespace("Resolver:AddressChanged"), handleAddressChanged);
   ponder.on(pluginNamespace("Resolver:NameChanged"), handleNameChanged);
